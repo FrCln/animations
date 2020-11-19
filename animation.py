@@ -22,7 +22,7 @@ class Animation:
     def __repr__(self):
         return f'<Animation({self.type}) {id(self)}>'
 
-    def recalculate(self):
+    def update(self):
         dt = (perf_counter() - self._start_time) / self.duration
         if dt > 1:
             return False
@@ -61,9 +61,9 @@ class Animated(GameObject):
         else:
             raise TypeError(f'Animation or list of Animations should be provided, not {animations.__class__.__name__}')
 
-    def recalculate(self):
+    def update(self):
         for anim in self._animations[:]:
-            if not anim.recalculate():
+            if not anim.update():
                 self.remove_animation(anim)
 
     def draw(self):
