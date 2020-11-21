@@ -1,7 +1,38 @@
-from time import perf_counter
+from abc import ABC, abstractmethod
+from threading import Thread
+import time
 from typing import List, Union, Tuple
 
 from core import GameObject
+
+
+class AbstractAnimation(ABC):
+
+    def __init__(self, tick_ms=None):
+        self.tick = tick_ms / 1000
+        self.thread = None
+        self._running = False
+
+    def __repr__(self):
+        return f'<Animation {id(self)}>'
+
+    @abstractmethod
+    def update(self):
+        pass
+
+    def _thread(self):
+        while self.update() and self._running:
+            if self.tick:
+                time.sleep(self.tick)
+
+    def run_in_thread(self):
+        t = Thread(target=self._thread)
+        self._running = True
+        t.start()
+        self.thread = t
+
+    def stop_thread(self):
+        self._running = False
 
 
 class Animation:
@@ -12,7 +43,7 @@ class Animation:
         self._obj = obj
         self._obj_x = obj.x
         self._obj_y = obj.y
-        self._start_time = perf_counter()
+        self._start_time = time.perf_counter()
         if anim_type not in self.accepted_types:
             raise ValueError(f'unknown animation type: {anim_type}')
         self.type = anim_type
@@ -23,7 +54,7 @@ class Animation:
         return f'<Animation({self.type}) {id(self)}>'
 
     def update(self):
-        dt = (perf_counter() - self._start_time) / self.duration
+        dt = (time.perf_counter() - self._start_time) / self.duration
         if dt > 1:
             return False
         if self.type == 'move':
