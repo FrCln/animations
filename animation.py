@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from threading import Thread
 import time
-from typing import List, Union, Tuple
+from typing import List, Union, Tuple, Callable, Any
 
 from core import GameObject
 
@@ -9,7 +9,10 @@ from core import GameObject
 class AbstractAnimation(ABC):
 
     def __init__(self, tick_ms=None):
-        self.tick = tick_ms / 1000
+        if tick_ms is not None:
+            self.tick = tick_ms / 1000
+        else:
+            self.tick = None
         self.thread = None
         self._running = False
 
@@ -34,6 +37,67 @@ class AbstractAnimation(ABC):
     def stop_thread(self):
         self._running = False
 
+
+class PropertyAnimation(AbstractAnimation):
+    def __init__(
+        self,
+        obj: Any,
+        propetry: str,
+        anim_function: Callable[Any, float],
+        tick_ms=None
+    ):
+        super().__init__(tick_ms)
+        self.obj = obj
+        self.propetry = propetry
+        self.anim_function = anim_function
+        self.time = time.perf_counter()
+
+    def update(self):
+        t = time.perf_counter()
+        self.time, dt = t, t - self.time
+        setattr(self.obj, self.propetry, anim_function(getattr(self.obj, self.propetry), dt))
+
+
+class FuncAnimation(AbstractAnimation):
+    def __init__(self, obj: Any, anim_function: Callable[Any, float], tick_ms=None):
+        super().__init__(tick_ms)
+        self.obj = obj
+        self.anim_function = anim_function
+        self.time = time.perf_counter()
+
+    def update(self):
+        t = time.perf_counter()
+        self.time, dt = t, t - self.time
+        anim_function(self.obj, dt)
+
+
+class AnimationChain(AbstractAnimation):
+    def __init__(self, animations: List[AbstractAnimation], tick_ms=None):
+        super().__init__(tick_ms)
+        self._animations = animations
+
+    def update(self):
+        for anim in self._animations[:]:
+            if not anim.update():
+                self.remove_animation(anim)
+
+    def add_animation(self, animation: AbstractAnimation):
+        if isinstance(animation, AbstractAnimation):
+            self._animations.append(animation)
+        else:
+            raise TypeError(f'attempt to add object {animation}, that is not Animation')
+
+    def remove_animation(self, animation: AbstractAnimation):
+        try:
+            self._animations.remove(animation)
+        except KeyError:
+            raise ValueError(
+                'attempt to remove animation that is not in the list: '
+                f'{Animation}'
+            )
+
+
+# ---- Old ----- #
 
 class Animation:
     accepted_types = ['move']
